@@ -1,11 +1,6 @@
 use std::collections::HashMap;
 use std::iter::once;
-
-// use crate::sim_builder::{
-//     build_simulation, read_wire_by_index, GateKind, GraphDesc, WireDesc,
-// };
 use circut_lang::prelude::*;
-
 use super::app::App;
 use super::graph::{EditorGraph, EditorNodeKind};
 
@@ -56,14 +51,12 @@ impl App {
     pub fn step_simulation(&mut self) {
         let Some(sim_runtime) = &mut self.sim_runtime else { return };
 
-        sim_runtime.run_one_tick(Some(self.input_states.clone()), &mut ExternalNodeLibrary::default());
+        let mut external_node_library = ExternalNodeLibrary::default();
 
-
-        // for (input_index, &input_value) in self.input_states.iter().enumerate() {
-        //     if input_index < simulation.input_wires.len() {
-        //         simulation.force_set_wire(simulation.input_wires[input_index], input_value);
-        //     }
-        // }
+        sim_runtime.run_one_tick(
+            Some(self.input_states.clone()),
+            &mut external_node_library
+        );
 
         self.output_states = sim_runtime.output_values();
 
@@ -85,12 +78,9 @@ pub fn editor_graph_to_desc(graph: &EditorGraph) -> GraphDesc {
     GraphDesc {
         n_inputs:    input_count,
         n_outputs:   output_count,
-        input_base:  0,
-        output_base: input_count,
-        gate_base:   input_count + output_count,
         gates: graph.nodes.iter().map(|node| {
             let kind = match &node.kind {
-                EditorNodeKind::Nand           => GateKind::Nand,
+                EditorNodeKind::Nand => GateKind::Nand,
                 EditorNodeKind::SavedGate(name) => GateKind::SavedGate(name.clone()),
             };
             (node.input_count, node.output_count, kind)
@@ -109,13 +99,13 @@ pub fn build_port_to_wire_index_map(
     let mut next_wire_id: u32 = 0;
 
     for input_index in 0..desc.n_inputs {
-        let node_id = desc.input_base + input_index;
+        let node_id = GraphDesc::input_base() + input_index;
         port_to_wire.insert((node_id, 0, true), next_wire_id);
         next_wire_id += 1;
     }
 
     for (gate_slot, (_, gate_output_count, _)) in desc.gates.iter().enumerate() {
-        let node_id = desc.gate_base + gate_slot;
+        let node_id = desc.gate_base() + gate_slot;
         for port_index in 0..*gate_output_count {
             port_to_wire.insert((node_id, port_index, true), next_wire_id);
             next_wire_id += 1;

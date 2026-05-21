@@ -34,14 +34,14 @@ impl App {
         let entry_point_desc = editor_graph_to_desc(&self.graph);
         let port_to_wire_index = build_port_to_wire_index_map(&entry_point_desc);
 
-        match Runtime::new_compile(script) {
+        match Runtime::new_compile(script, Some(&self.external_gates)) {
             Ok(simulation) => {
-                self.sim_runtime         = Some(simulation);
+                self.sim_runtime        = Some(simulation);
                 self.port_to_wire_index = port_to_wire_index;
                 self.simulation_error   = None;
             }
             Err(error_message) => {
-                self.sim_runtime         = None;
+                self.sim_runtime        = None;
                 self.port_to_wire_index = HashMap::new();
                 self.simulation_error   = Some(format!("{:?}", error_message));
             }
@@ -61,12 +61,13 @@ impl App {
 
         let mut external_node_library = ExternalNodeLibrary::default();
 
-        self.simulation_error = sim_runtime.run_one_tick(
-            Some(self.input_states.clone()),
+        match sim_runtime.run_one_tick_with_io(
+            self.input_states.clone(),
             &mut external_node_library
-        ).err().and_then(|err|Some(format!("{:?}", err)));
-
-        self.output_states = sim_runtime.output_values();
+        ) {
+            Ok(output) => self.output_states = output,
+            Err(err) => self.simulation_error = Some(format!("{:?}", err)),
+        }
 
         self.live_wire_signals.clear();
         for &wire_index in self.port_to_wire_index.values() {

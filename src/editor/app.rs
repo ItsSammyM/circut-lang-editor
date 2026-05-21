@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use super::constants::{COLOR_PANEL_BG, COLOR_TEXT, FONT_SIZE_HEADING};
 use super::library::Library;
+use circut_lang::external_node_descriptions::ExternalNodeDescrptions;
 use egui::Pos2;
 use egui::Vec2;
 use egui::{Visuals, ViewportBuilder};
 
-use circut_lang::prelude::PortRef;
-use circut_lang::prelude::Runtime;
+use circut_lang::prelude::{ExternalNodeDescrption, PortRef, Runtime};
 
 use super::graph::{BulkWireState, EditorGraph};
 
@@ -15,6 +15,7 @@ pub struct App {
     pub title: String,
     pub graph: EditorGraph,
     pub library: Library,
+    pub external_gates: ExternalNodeDescrptions,
 
     pub sim_runtime: Option<Runtime>,
     pub live_wire_signals: HashMap<u32, bool>,
@@ -50,6 +51,7 @@ impl Default for App {
             title: "My Gate".into(),
             graph: EditorGraph::default(),
             library: Library::default(),
+            external_gates: ExternalNodeDescrptions::default(),
             sim_runtime: None,
             live_wire_signals: HashMap::new(),
             port_to_wire_index: HashMap::new(),

@@ -1,7 +1,6 @@
 use egui::Pos2;
 use serde::{Deserialize, Serialize};
 
-
 use circut_lang::prelude::PortRef;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -37,6 +36,8 @@ pub enum EditorNodeKind {
     Nand,
     /// Name of the gate in App::library, identifying which saved gate this instance represents.
     SavedGate(String),
+    /// Name of an imported external gate.
+    External(String),
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

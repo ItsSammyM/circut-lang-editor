@@ -5,6 +5,8 @@ use egui::{
 
 use circut_lang::prelude::PortRef;
 
+use crate::editor::nodes::make_external_gate_node;
+
 use super::app::App;
 use super::constants::{
     COLOR_BACKGROUND, COLOR_BOX_SELECT, COLOR_BOX_SELECT_BORDER, COLOR_DIM,
@@ -149,6 +151,37 @@ impl App {
                         if ui.button("⊼  NAND  (2→1)").clicked() {
                             self.graph.nodes.push(make_nand_node(spawn_canvas_pos));
                             ui.close_menu();
+                        }
+
+                        if !self.external_gates.nodes.is_empty() {
+                            ui.separator();
+                            ui.label(
+                                RichText::new("External")
+                                    .color(COLOR_DIM)
+                                    .italics()
+                                    .size(FONT_SIZE_BODY),
+                            );
+                            let mut gate_to_spawn = None;
+                            for (node_name, extern_node) in self.external_gates.nodes.iter() {
+                                let button_label = format!(
+                                    "▣  {}  ({} → {})",
+                                    node_name, extern_node.inputs.len(), extern_node.outputs.len()
+                                );
+                                if ui.button(button_label).clicked() {
+                                    gate_to_spawn = Some(node_name);
+                                    ui.close_menu();
+                                }
+                            }
+                            if let Some(gate_name) = gate_to_spawn {
+                                let saved_gate = self.external_gates.nodes.get(gate_name).unwrap();
+                                let input_labels: Vec<String>  = saved_gate.inputs.clone();
+                                let output_labels: Vec<String> = saved_gate.outputs.clone();
+                                self.graph.nodes.push(make_external_gate_node(
+                                    spawn_canvas_pos,
+                                    gate_name.clone(),
+                                    saved_gate
+                                ));
+                            }
                         }
 
                         if !self.library.is_empty() {
@@ -327,20 +360,26 @@ impl App {
                 } else if canvas_response.drag_stopped() {
                     let current = pointer_canvas_pos.unwrap_or(drag_start_canvas);
                     let selection_rect = canvas_rect_from_two_points(drag_start_canvas, current);
+
                     let mut selected_input_ports =
                         self.collect_ports_in_canvas_rect(selection_rect, false, canvas_rect);
 
-                    selected_input_ports.sort_by(|port_a, port_b| {
-                        let a_y = self
-                            .port_to_screen_pos(port_a, false, canvas_origin, canvas_rect)
-                            .map(|p| p.y)
-                            .unwrap_or(0.0);
-                        let b_y = self
-                            .port_to_screen_pos(port_b, false, canvas_origin, canvas_rect)
-                            .map(|p| p.y)
-                            .unwrap_or(0.0);
-                        a_y.partial_cmp(&b_y).unwrap_or(std::cmp::Ordering::Equal)
-                    });
+                    selected_input_ports.retain(|port|
+                        self.graph.wires.iter().all(|wire|wire.to != *port)
+                    );
+
+                    selected_input_ports
+                        .sort_by(|port_a, port_b| {
+                            let a_y = self
+                                .port_to_screen_pos(port_a, false, canvas_origin, canvas_rect)
+                                .map(|p| p.y)
+                                .unwrap_or(0.0);
+                            let b_y = self
+                                .port_to_screen_pos(port_b, false, canvas_origin, canvas_rect)
+                                .map(|p| p.y)
+                                .unwrap_or(0.0);
+                            a_y.partial_cmp(&b_y).unwrap_or(std::cmp::Ordering::Equal)
+                        });
 
                     let pair_count = selected_output_ports.len().min(selected_input_ports.len());
                     for pair_index in 0..pair_count {

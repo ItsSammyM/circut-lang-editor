@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use bincode::Options;
 use serde::{Deserialize, Serialize};
 
+use circut_lang::prelude::{ExternalNodeDescrption, ExternalNodeDescrptions};
+
 use super::app::App;
 use super::graph::{EditorGraph, LibraryGate};
 
@@ -90,8 +92,16 @@ impl Library {
     // ── Persistence ────────────────────────────────────────────────────────────
 
     pub fn save_to_file(&self) -> Result<(), String> {
-        let file = std::fs::File::create("my_library.lbl")
+
+        let Some(path) = rfd::FileDialog::new()
+            .add_filter("Circut Lang Editor", &["cle"])
+            .set_file_name("my_library.cle")
+            .set_title("Save cle file")
+            .save_file() else {return Err("Couldnt save file".to_string())};
+
+        let file = std::fs::File::create(path)
             .map_err(|err| format!("Failed to open file on save: {}", err))?;
+
         bincode::config::DefaultOptions::new()
             .with_limit(10 * 1024 * 1024)
             .serialize_into(file, &self.gates)
@@ -99,8 +109,15 @@ impl Library {
     }
 
     pub fn load_from_file() -> Result<Self, String> {
-        let file = std::fs::File::open("my_library.lbl")
+
+        let Some(path) = rfd::FileDialog::new()
+            .add_filter("Circut Lang Editor", &["cle"])
+            .set_title("Load cle file")
+            .pick_file() else {return Err("Couldnt find file".to_string())};
+
+        let file = std::fs::File::open(path)
             .map_err(|err| format!("Failed to open file on load: {}", err))?;
+        
         let gates: HashMap<String, LibraryGate> = bincode::config::DefaultOptions::new()
             .with_limit(10 * 1024 * 1024)
             .deserialize_from(file)
@@ -190,5 +207,54 @@ impl App {
             let updated_gate = self.library.get(new_name).unwrap().clone();
             self.graph.update_saved_gate_instances(new_name, &updated_gate);
         }
+    }
+
+    /// Import external primitive nodes from a JSON file using a native dialog.
+    pub fn import_external_gates(&mut self) {
+        let Some(path) = rfd::FileDialog::new()
+            .add_filter("JSON", &["json"])
+            .pick_file() else {return;};
+        
+        let content = match std::fs::read_to_string(&path) {
+            Ok(content) => content,
+            Err(e) => {
+                self.simulation_error = Some(format!("Failed to read file: {}", e));
+                return;
+            }
+        };
+        
+        let external_node_descriptions = match serde_json::from_str::<ExternalNodeDescrptions>(&content) {
+            Ok(file) => file,
+            Err(e) => {
+                self.simulation_error = Some(format!("Failed to parse JSON: {}", e));
+                return;
+            },
+        };
+
+        for (node_name, node_def) in external_node_descriptions.nodes {
+            // Replace if name exists, otherwise add
+            self.external_gates.nodes
+                .entry(node_name)
+                .insert_entry(node_def);
+        }
+    }
+
+    /// Import external primitive nodes from a JSON file using a native dialog.
+    pub fn save_as_script(&mut self) -> Result<(), String> {
+        let Some(path) = rfd::FileDialog::new()
+            .add_filter("Circut Lang Script", &["cls"])
+            .set_file_name("my_script.cls")
+            .set_title("Save cle file")
+            .save_file() else {return Err("Couldnt save file".to_string())};
+
+        let file = std::fs::File::create(path)
+            .map_err(|err| format!("Failed to open file on save: {}", err))?;
+
+        let script = self.create_script_from_graph("entry_point");
+
+        bincode::config::DefaultOptions::new()
+            .with_limit(10 * 1024 * 1024)
+            .serialize_into(file, &script)
+            .map_err(|err| format!("Serialize on save failed: {}", err))
     }
 }

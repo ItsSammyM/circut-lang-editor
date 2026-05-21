@@ -9,3 +9,5 @@ bincode   = "1"
 eframe = { version = "0.27", features = ["default"] }
 egui = "0.27"
 circut-lang = { path = "../circut-lang" }
+rfd = "*"
+serde_json = "*"

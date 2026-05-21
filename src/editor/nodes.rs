@@ -1,5 +1,7 @@
 use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Rounding, Stroke, pos2, vec2};
 
+use circut_lang::prelude::ExternalNodeDescrption;
+
 use super::app::App;
 use super::constants::{
     COLOR_NODE_FILL, COLOR_NODE_HOVERED, COLOR_NODE_STROKE,
@@ -246,5 +248,18 @@ pub fn make_saved_gate_node(
         kind: EditorNodeKind::SavedGate(gate_name),
         input_labels,
         output_labels,
+    }
+}
+
+/// Construct an `EditorNode` for an imported external gate at the given canvas position.
+pub fn make_external_gate_node(pos: Pos2, name: String, gate_def: &ExternalNodeDescrption) -> EditorNode {
+    EditorNode {
+        label: name.clone(),
+        pos,
+        input_count: gate_def.inputs.len(),
+        output_count: gate_def.outputs.len(),
+        kind: EditorNodeKind::External(name.clone()),
+        input_labels: gate_def.inputs.clone(),
+        output_labels: gate_def.outputs.clone(),
     }
 }

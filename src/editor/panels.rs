@@ -70,9 +70,7 @@ impl App {
                         self.step_simulation();
                     }
 
-                    ui.separator();
-
-                    if let Some(error_message) = &self.simulation_error.clone() {
+                    if let Some(error_message) = &self.simulation_error {
                         ui.label(
                             RichText::new(format!("⚠  {error_message}"))
                                 .color(Color32::RED)
@@ -84,6 +82,16 @@ impl App {
                                 .color(COLOR_SIGNAL_HIGH)
                                 .size(FONT_SIZE_SUBHEAD),
                         );
+                    }
+
+                    ui.separator();
+
+                    if ui
+                        .button(RichText::new("Save Script").color(Color32::from_rgb(150, 210, 255)))
+                        .on_hover_text("Save as script")
+                        .clicked()
+                    {
+                        self.save_as_script();
                     }
                 });
             });
@@ -360,16 +368,27 @@ impl App {
                     }
                 });
 
+                ui.add_space(12.0);
+                ui.separator();
+                if ui
+                    .button(RichText::new("📥  Import Exernal").color(Color32::from_rgb(150, 210, 255)))
+                    .on_hover_text("Import external nodes from JSON")
+                    .clicked()
+                {
+                    self.import_external_gates();
+                }
+
                 // ── Library ───────────────────────────────────────────────────
 
                 ui.add_space(12.0);
+
                 ui.label(RichText::new("LIBRARY").color(COLOR_DIM).strong().size(FONT_SIZE_BODY));
                 ui.separator();
 
                 ui.horizontal(|ui| {
                     if ui
                         .button(RichText::new("Load").color(Color32::from_rgb(150, 210, 255)))
-                        .on_hover_text("Load library from file")
+                        .on_hover_text("Load library from cle file")
                         .clicked()
                     {
                         self.load_library_from_file();
@@ -377,7 +396,7 @@ impl App {
                     if !self.library.is_empty() {
                         if ui
                             .button(RichText::new("Save").color(Color32::from_rgb(150, 210, 255)))
-                            .on_hover_text("Save library to file")
+                            .on_hover_text("Save library to cle file")
                             .clicked()
                         {
                             self.save_library_to_file();
